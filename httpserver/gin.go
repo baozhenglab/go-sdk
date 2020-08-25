@@ -1,6 +1,8 @@
 package httpserver
 
 import (
+	"chat-backend/external/go-sdk/httpserver/middleware"
+	"chat-backend/external/go-sdk/logger"
 	"context"
 	"flag"
 	"fmt"
@@ -9,8 +11,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/baozhenglab/go-sdk/httpserver/middleware"
-	"github.com/baozhenglab/go-sdk/logger"
 	"github.com/gin-gonic/gin"
 	"go.opencensus.io/plugin/ochttp"
 )
@@ -84,11 +84,9 @@ func (gs *ginService) Configure() error {
 		//gs.router.Use(gin.Recovery())
 		gs.router.Use(middleware.PanicLogger())
 	}
-
 	for _, m := range gs.middlewares {
 		gs.router.Use(m)
 	}
-
 	och := &ochttp.Handler{
 		Handler: gs.router,
 	}
@@ -172,6 +170,10 @@ func (gs *ginService) AddHandler(hdl func(*gin.Engine)) {
 	gs.handlers = append(gs.handlers, hdl)
 }
 
+func (gs *ginService) AddMiddleware(hdl gin.HandlerFunc) {
+	gs.middlewares = append(gs.middlewares, hdl)
+}
+
 func (gs *ginService) Reload(config Config) error {
 	gs.Config = config
 	<-gs.Stop()
@@ -184,4 +186,13 @@ func (gs *ginService) GetConfig() Config {
 
 func (gs *ginService) IsRunning() bool {
 	return gs.svr != nil
+}
+
+func (gs *ginService) Routes() []gin.RouteInfo {
+	gin.SetMode(gin.ReleaseMode)
+	gs.router = gin.New()
+	for _, hdl := range gs.handlers {
+		hdl(gs.router)
+	}
+	return gs.router.Routes()
 }

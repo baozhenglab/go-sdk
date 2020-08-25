@@ -3,6 +3,8 @@
 package goservice
 
 import (
+	"chat-backend/external/go-sdk/httpserver"
+	"chat-backend/external/go-sdk/logger"
 	"flag"
 	"fmt"
 	"log"
@@ -11,9 +13,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/baozhenglab/go-sdk/httpserver"
-	"github.com/baozhenglab/go-sdk/logger"
 	"github.com/joho/godotenv"
+	"github.com/olekukonko/tablewriter"
 )
 
 const (
@@ -41,10 +42,11 @@ type service struct {
 
 func New(opts ...Option) Service {
 	sv := &service{
-		opts:         opts,
-		signalChan:   make(chan os.Signal, 1),
-		subServices:  []Runnable{},
-		initServices: map[string]PrefixRunnable{},
+		opts:              opts,
+		signalChan:        make(chan os.Signal, 1),
+		subServices:       []Runnable{},
+		initServices:      map[string]PrefixRunnable{},
+		configureServices: map[string]PrefixConfigure{},
 	}
 
 	// init default logger
@@ -71,11 +73,10 @@ func New(opts ...Option) Service {
 
 	loggerRunnable := logger.GetCurrent().(Runnable)
 	loggerRunnable.InitFlags()
+	_ = loggerRunnable.Configure()
 
 	sv.cmdLine = newFlagSet(sv.name, flag.CommandLine)
 	sv.parseFlags()
-
-	_ = loggerRunnable.Configure()
 
 	return sv
 }
@@ -193,6 +194,20 @@ func (s *service) OutEnv() {
 	s.cmdLine.GetSampleEnvs()
 }
 
+func (s *service) RouteTable() {
+	routes := s.HTTPServer().Routes()
+	data := make([][]string, 0)
+	for _, route := range routes {
+		r := []string{route.Path, route.Method, route.Handler}
+		data = append(data, r)
+	}
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetRowLine(true)
+	table.SetHeader([]string{"Path", "Method", "Handler"})
+	table.AppendBulk(data) // Add Bulk Data
+	table.Render()
+}
+
 func (s *service) parseFlags() {
 	envFile := os.Getenv("ENV_FILE")
 	if envFile == "" {
@@ -264,6 +279,10 @@ func (s *service) Get(prefix string) (interface{}, bool) {
 	is, ok := s.initServices[prefix]
 
 	if !ok {
+		if is, ok := s.configureServices[prefix]; ok {
+			return is.Get(), true
+		}
+
 		return nil, ok
 	}
 

@@ -3,7 +3,8 @@
 package goservice
 
 import (
-	"github.com/baozhenglab/go-sdk/logger"
+	"chat-backend/external/go-sdk/logger"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -25,13 +26,6 @@ type Storage interface {
 type PrefixRunnable interface {
 	HasPrefix
 	Runnable
-}
-
-//This interface be dedicated service only init
-//config as rest api: elasticsearch,facebook-auth,....
-type PrefixConfigure interface {
-	HasPrefix
-	Configure
 }
 
 type HasPrefix interface {
@@ -63,6 +57,9 @@ type Service interface {
 	// Method export all flags to std/terminal
 	// We might use: "> .env" to move its content .env file
 	OutEnv()
+
+	//Router table
+	RouteTable()
 }
 
 // Service Context: A wrapper for all things needed for developing a service
@@ -87,13 +84,6 @@ type Runnable interface {
 	Stop() <-chan bool
 }
 
-//This interface be dedicated service only init
-//config as rest api: elasticsearch,facebook-auth,....
-type Configure interface {
-	Name() string
-	InitFlags()
-}
-
 // GIN HTTP server for REST API
 type HttpServer interface {
 	Runnable
@@ -103,4 +93,17 @@ type HttpServer interface {
 	//GetConfig() http_server.Config
 	// URI that the server is listening
 	URI() string
+
+	AddMiddleware(gin.HandlerFunc)
+
+	Routes() []gin.RouteInfo
+}
+
+//Config init flag for other config without init service
+//Example set jwt key,...
+//Service Provider for service thirth party
+//Example: Telegram bot, elasticsearch, prdiction IO,...
+type PrefixConfigure interface {
+	InitFlags()
+	HasPrefix
 }

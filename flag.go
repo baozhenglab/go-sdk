@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/facebookgo/flagenv"
+	"github.com/olekukonko/tablewriter"
 )
 
 // isZeroValue guesses whether the string represents the zero
@@ -58,25 +59,38 @@ func newFlagSet(name string, fs *flag.FlagSet) *AppFlagSet {
 }
 
 func (f *AppFlagSet) GetSampleEnvs() {
+	data := make([][]string, 0)
 	f.VisitAll(func(f *flag.Flag) {
 		if f.Name == "outenv" {
 			return
 		}
-
-		s := fmt.Sprintf("## %s (-%s)\n", f.Usage, f.Name)
-		s += fmt.Sprintf("#%s=", getEnvName(f.Name))
+		row := make([]string, 4)
+		nameenv := getEnvName(f.Name)
+		row[0] = strings.Split(nameenv, "_")[0]
+		row[1] = nameenv
+		row[3] = f.Usage
 
 		if !isZeroValue(f, f.DefValue) {
 			t := fmt.Sprintf("%T", f.Value)
 			if t == "*flag.stringValue" {
 				// put quotes on the value
-				s += fmt.Sprintf("%q", f.DefValue)
+				row[2] = fmt.Sprintf("%q", f.DefValue)
 			} else {
-				s += fmt.Sprintf("%v", f.DefValue)
+				row[2] = fmt.Sprintf("%v", f.DefValue)
 			}
 		}
-		fmt.Print(s, "\n\n")
+		data = append(data, row)
 	})
+	f.ShowTable(data)
+}
+
+func (f *AppFlagSet) ShowTable(data [][]string) {
+	table := tablewriter.NewWriter(os.Stdout)
+	table.SetHeader([]string{"GROUP", "NAME", "DEFAULT VALUE", "USAGE"})
+	table.SetAutoMergeCells(true)
+	table.SetRowLine(true)
+	table.AppendBulk(data)
+	table.Render()
 }
 
 func (f *AppFlagSet) Parse(args []string) {

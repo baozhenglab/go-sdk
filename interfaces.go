@@ -3,7 +3,7 @@
 package goservice
 
 import (
-	"chat-backend/external/go-sdk/logger"
+	"github.com/baozhenglab/go-sdk/logger"
 
 	"github.com/gin-gonic/gin"
 )

@@ -3,8 +3,6 @@
 package goservice
 
 import (
-	"chat-backend/external/go-sdk/httpserver"
-	"chat-backend/external/go-sdk/logger"
 	"flag"
 	"fmt"
 	"log"
@@ -12,6 +10,9 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+
+	"github.com/baozhenglab/go-sdk/httpserver"
+	"github.com/baozhenglab/go-sdk/logger"
 
 	"github.com/joho/godotenv"
 	"github.com/olekukonko/tablewriter"

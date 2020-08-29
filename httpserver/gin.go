@@ -1,8 +1,6 @@
 package httpserver
 
 import (
-	"chat-backend/external/go-sdk/httpserver/middleware"
-	"chat-backend/external/go-sdk/logger"
 	"context"
 	"flag"
 	"fmt"
@@ -10,6 +8,9 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+
+	"github.com/baozhenglab/go-sdk/httpserver/middleware"
+	"github.com/baozhenglab/go-sdk/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.opencensus.io/plugin/ochttp"

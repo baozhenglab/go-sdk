@@ -2,6 +2,11 @@ package logger
 
 import (
 	"flag"
+	"fmt"
+	"os"
+	"runtime"
+	"strings"
+
 	"github.com/sirupsen/logrus"
 )
 
@@ -34,6 +39,12 @@ func NewMessageLogService(config *Config) *messageLogger {
 	newLog.Formatter = logrus.Formatter(&logrus.TextFormatter{
 		FullTimestamp:   true,
 		TimestampFormat: "15:04:05",
+		CallerPrettyfier: func(f *runtime.Frame) (string, string) {
+			wd, _ := os.Getwd()
+			repopath := fmt.Sprintf("%s", wd)
+			filename := strings.Replace(f.File, repopath, "", -1)
+			return fmt.Sprintf("%s()", f.Function), fmt.Sprintf("%s:%d", filename, f.Line)
+		},
 	})
 
 	log := &logger{logrus.NewEntry(newLog)}

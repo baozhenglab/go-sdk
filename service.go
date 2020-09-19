@@ -85,7 +85,7 @@ func (s *service) SetHttpServer(has bool) Service {
 	return s
 }
 
-func (s *service) Create(has bool) Service {
+func (s *service) Create() Service {
 	if s.hasHttp {
 		//// Http server
 		httpServer := httpserver.New(s.name)

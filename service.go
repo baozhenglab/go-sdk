@@ -35,6 +35,7 @@ type service struct {
 	configureServices map[string]PrefixConfigure
 	isRegister        bool
 	logger            logger.Logger
+	hasHttp           bool
 	httpServer        HttpServer
 	signalChan        chan os.Signal
 	cmdLine           *AppFlagSet
@@ -48,6 +49,7 @@ func New(opts ...Option) Service {
 		subServices:       []Runnable{},
 		initServices:      map[string]PrefixRunnable{},
 		configureServices: map[string]PrefixConfigure{},
+		hasHttp:           true,
 	}
 
 	// init default logger
@@ -57,28 +59,6 @@ func New(opts ...Option) Service {
 	for _, opt := range opts {
 		opt(sv)
 	}
-
-	//// Http server
-	httpServer := httpserver.New(sv.name)
-	sv.httpServer = httpServer
-
-	sv.subServices = append(sv.subServices, httpServer)
-
-	sv.initFlags()
-
-	if sv.name == "" {
-		if len(os.Args) >= 2 {
-			sv.name = strings.Join(os.Args[:2], " ")
-		}
-	}
-
-	loggerRunnable := logger.GetCurrent().(Runnable)
-	loggerRunnable.InitFlags()
-	_ = loggerRunnable.Configure()
-
-	sv.cmdLine = newFlagSet(sv.name, flag.CommandLine)
-	sv.parseFlags()
-
 	return sv
 }
 
@@ -98,6 +78,38 @@ func (s *service) Init() error {
 	}
 
 	return nil
+}
+
+func (s *service) SetHttpServer(has bool) Service {
+	s.hasHttp = has
+	return s
+}
+
+func (s *service) Create(has bool) Service {
+	if s.hasHttp {
+		//// Http server
+		httpServer := httpserver.New(s.name)
+		s.httpServer = httpServer
+
+		s.subServices = append(s.subServices, httpServer)
+	}
+
+	s.initFlags()
+
+	if s.name == "" {
+		if len(os.Args) >= 2 {
+			s.name = strings.Join(os.Args[:2], " ")
+		}
+	}
+
+	loggerRunnable := logger.GetCurrent().(Runnable)
+	loggerRunnable.InitFlags()
+	_ = loggerRunnable.Configure()
+
+	s.cmdLine = newFlagSet(s.name, flag.CommandLine)
+	s.parseFlags()
+
+	return s
 }
 
 func (s *service) IsRegistered() bool {

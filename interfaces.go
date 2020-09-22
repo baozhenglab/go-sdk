@@ -60,10 +60,6 @@ type Service interface {
 
 	//Router table
 	RouteTable()
-
-	SetHttpServer(has bool) Service
-
-	Create() Service
 }
 
 // Service Context: A wrapper for all things needed for developing a service

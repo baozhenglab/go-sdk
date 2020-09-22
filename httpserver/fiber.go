@@ -11,58 +11,58 @@ import (
 
 	"github.com/baozhenglab/go-sdk/v2/httpserver/middleware"
 	"github.com/baozhenglab/go-sdk/v2/logger"
-
 	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 	"go.opencensus.io/plugin/ochttp"
 )
 
 var (
-	ginMode     string
-	ginNoLogger bool
-	defaultPort = 3000
+	fiberMode     string
+	fiberNoLogger bool
+	defaultPort   = 3000
 )
 
 type Config struct {
-	Port         int    `json:"http_port"`
-	BindAddr     string `json:"http_bind_addr"`
-	GinNoDefault bool   `json:"http_no_default"`
+	Port           int    `json:"http_port"`
+	BindAddr       string `json:"http_bind_addr"`
+	FiberNoDefault bool   `json:"http_no_default"`
 }
 
 type GinService interface {
 	// block until ready
 	Port() int
-	isGinService()
+	isFiberService()
 }
 
-type ginService struct {
+type fiberService struct {
 	Config
 	isEnabled   bool
 	name        string
 	logger      logger.Logger
 	svr         *myHttpServer
-	router      *gin.Engine
+	router      *fiber.App
 	mu          *sync.Mutex
-	handlers    []func(*gin.Engine)
-	middlewares []gin.HandlerFunc
+	handlers    []func(*fiber.App)
+	middlewares []fiber.Handler
 	//registeredID  string
 	//registryAgent registry.Agent
 }
 
-func New(name string) *ginService {
-	return &ginService{
+func New(name string) *fiberService {
+	return &fiberService{
 		name:        name,
 		mu:          &sync.Mutex{},
-		handlers:    []func(*gin.Engine){},
-		middlewares: []gin.HandlerFunc{},
+		handlers:    []func(*fiber.App){},
+		middlewares: []fiber.Handler{},
 	}
 }
 
-func (gs *ginService) Name() string {
-	return gs.name + "-gin"
+func (fs *fiberService) Name() string {
+	return gs.name + "-fiber"
 }
 
-func (gs *ginService) InitFlags() {
-	prefix := "gin"
+func (fs *fiberService) InitFlags() {
+	prefix := "fiber"
 	flag.IntVar(&gs.Config.Port, prefix+"Port", defaultPort, "gin server Port. If 0 => get a random Port")
 	flag.StringVar(&gs.BindAddr, prefix+"addr", "", "gin server bind address")
 	flag.StringVar(&ginMode, "gin-mode", "", "gin mode")

@@ -6,7 +6,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/baozhenglab/go-sdk/logger"
+	"github.com/baozhenglab/go-sdk/v2/logger"
 	"github.com/baozhenglab/oauthclient"
 	"github.com/baozhenglab/sdkcm"
 	"github.com/gin-gonic/gin"

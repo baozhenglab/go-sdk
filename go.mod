@@ -1,8 +1,9 @@
-module github.com/baozhenglab/go-sdk
+module github.com/baozhenglab/go-sdk/v2
 
-go 1.13
+go 1.14
 
 require (
+	github.com/baozhenglab/go-sdk v1.0.4
 	github.com/baozhenglab/oauthclient v1.0.0
 	github.com/baozhenglab/sdkcm v1.0.1
 	github.com/btcsuite/btcutil v1.0.2

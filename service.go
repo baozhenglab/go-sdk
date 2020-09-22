@@ -11,8 +11,8 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/baozhenglab/go-sdk/httpserver"
-	"github.com/baozhenglab/go-sdk/logger"
+	"github.com/baozhenglab/go-sdk/v2/httpserver"
+	"github.com/baozhenglab/go-sdk/v2/logger"
 
 	"github.com/joho/godotenv"
 	"github.com/olekukonko/tablewriter"

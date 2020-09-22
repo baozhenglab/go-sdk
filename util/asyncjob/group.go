@@ -5,7 +5,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/baozhenglab/go-sdk/logger"
+	"github.com/baozhenglab/go-sdk/v2/logger"
 )
 
 type Job interface {

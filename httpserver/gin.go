@@ -9,8 +9,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/baozhenglab/go-sdk/httpserver/middleware"
-	"github.com/baozhenglab/go-sdk/logger"
+	"github.com/baozhenglab/go-sdk/v2/httpserver/middleware"
+	"github.com/baozhenglab/go-sdk/v2/logger"
 
 	"github.com/gin-gonic/gin"
 	"go.opencensus.io/plugin/ochttp"

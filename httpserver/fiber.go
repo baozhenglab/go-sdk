@@ -63,18 +63,18 @@ func (fs *fiberService) Name() string {
 
 func (fs *fiberService) InitFlags() {
 	prefix := "fiber"
-	flag.IntVar(&gs.Config.Port, prefix+"Port", defaultPort, "gin server Port. If 0 => get a random Port")
-	flag.StringVar(&gs.BindAddr, prefix+"addr", "", "gin server bind address")
-	flag.StringVar(&ginMode, "gin-mode", "", "gin mode")
-	flag.BoolVar(&ginNoLogger, "gin-no-logger", false, "disable default gin logger middleware")
+	flag.IntVar(&fs.Config.Port, prefix+"Port", defaultPort, "fiber server Port. If 0 => get a random Port")
+	flag.StringVar(&fs.BindAddr, prefix+"addr", "", "fiber server bind address")
+	flag.StringVar(&fiberMode, "fiber-mode", "", "fiber mode")
+	flag.BoolVar(&fiberNoLogger, "fiber-no-logger", false, "disable default fiber logger middleware")
 }
 
-func (gs *ginService) Configure() error {
-	gs.logger = logger.GetCurrent().GetLogger("gin")
+func (fs *fiberService) Configure() error {
+	fs.logger = logger.GetCurrent().GetLogger("fiber")
 
-	if ginMode == "release" {
-		gin.SetMode(gin.ReleaseMode)
-	}
+	// if fiberMode == "release" {
+	// 	gin.SetMode(gin.ReleaseMode)
+	// }
 
 	gs.logger.Debug("init gin engine...")
 	gs.router = gin.New()

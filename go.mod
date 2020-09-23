@@ -16,6 +16,5 @@ require (
 	github.com/olekukonko/tablewriter v0.0.4
 	github.com/sirupsen/logrus v1.6.0
 	github.com/valyala/fasthttp v1.16.0
-	go.opencensus.io v0.22.4
 	gopkg.in/go-playground/validator.v9 v9.31.0
 )

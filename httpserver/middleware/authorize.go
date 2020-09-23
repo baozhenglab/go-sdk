@@ -3,7 +3,6 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 
 	"github.com/valyala/fasthttp"
@@ -11,6 +10,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 
 	"github.com/baozhenglab/go-sdk/v2/logger"
+	"github.com/baozhenglab/go-sdk/v2/util"
 	"github.com/baozhenglab/oauthclient"
 	"github.com/baozhenglab/sdkcm"
 )
@@ -26,17 +26,22 @@ type CurrentUserProvider interface {
 	ServiceContext
 }
 
+type CurrentUserContext struct {
+	sdkcm.OAuth
+	sdkcm.User
+}
+
 func Authorize(cup CurrentUserProvider, isRequired ...bool) fiber.Handler {
 	required := len(isRequired) == 0
 
 	return func(c *fiber.Ctx) error {
-		token := accessTokenFromRequest(c.Request)
+		token := accessTokenFromRequest(c.Request())
 
 		if token == "" {
 			if required {
 				panic(sdkcm.ErrUnauthorized(nil, sdkcm.ErrAccessTokenInvalid))
 			} else {
-				c.Set("current_user", guest{})
+				c.Set("current_user", util.EncodeUser(guest{}))
 				return c.Next()
 			}
 
@@ -54,26 +59,26 @@ func Authorize(cup CurrentUserProvider, isRequired ...bool) fiber.Handler {
 		}
 
 		// Fetch user info from db
-		u, err := cup.GetCurrentUser(c.Request.Context(), tokenInfo.UserId)
+		u, err := cup.GetCurrentUser(c.Context(), tokenInfo.UserId)
 
 		if err != nil {
 			panic(sdkcm.ErrUnauthorized(err, sdkcm.ErrUserNotFound))
 		}
 
-		c.Set("current_user", sdkcm.CurrentUser(tokenInfo, u))
+		c.Set("current_user", util.EncodeUser(sdkcm.CurrentUser(tokenInfo, u)))
 		return c.Next()
 	}
 }
 
 func RequireRoles(roles ...fmt.Stringer) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		r, ok := c.Get("current_user")
+		r := c.Get("current_user")
 
-		if !ok {
+		if r == "" {
 			panic(sdkcm.ErrUnauthorized(sdkcm.ErrNoPermission, sdkcm.ErrNoPermission))
 		}
-
-		requester := r.(sdkcm.Requester)
+		var requester CurrentUserContext
+		util.DecodeUser(r, &requester)
 		reqRole := sdkcm.ParseSystemRole(requester.GetSystemRole())
 
 		for _, v := range roles {
@@ -98,10 +103,7 @@ func accessTokenFromRequest(req *fasthttp.Request) string {
 	if len(split) != 2 || !strings.EqualFold(split[0], "bearer") {
 		// Nothing in Authorization header, try access_token
 		// Empty string returned if there's no such parameter
-		if err := req.MultipartForm(); err != nil && err != http.ErrNotMultipart {
-			return ""
-		}
-		return req.B
+		return ""
 	}
 
 	return split[1]

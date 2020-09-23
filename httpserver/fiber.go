@@ -59,7 +59,7 @@ func New(name string) *fiberService {
 }
 
 func (fs *fiberService) Name() string {
-	return gs.name + "-fiber"
+	return fs.name + "-fiber"
 }
 
 func (fs *fiberService) InitFlags() {
@@ -79,8 +79,8 @@ func (fs *fiberService) Configure() error {
 
 	fs.logger.Debug("init fiber engine...")
 	fs.router = fiber.New()
-	for _, m := range gs.middlewares {
-		gs.router.Use(m)
+	for _, m := range fs.middlewares {
+		fs.router.Use(m)
 	}
 	if !fs.FiberNoDefault {
 		if !fiberNoLogger {
@@ -90,10 +90,10 @@ func (fs *fiberService) Configure() error {
 		fs.router.Use(middleware.PanicLogger())
 	}
 	och := &ochttp.Handler{
-		Handler: gs.router,
+		Handler: fs.router,
 	}
 
-	gs.svr = &myHttpServer{
+	fs.svr = &myHttpServer{
 		Server: http.Server{Handler: och},
 	}
 
@@ -107,31 +107,31 @@ func formatBindAddr(s string, p int) string {
 	return fmt.Sprintf("%s:%d", s, p)
 }
 
-func (gs *ginService) Run() error {
-	if !gs.isEnabled {
+func (fs *fiberService) Run() error {
+	if !fs.isEnabled {
 		return nil
 	}
 
-	if err := gs.Configure(); err != nil {
+	if err := fs.Configure(); err != nil {
 		return err
 	}
 
-	for _, hdl := range gs.handlers {
-		hdl(gs.router)
+	for _, hdl := range fs.handlers {
+		hdl(fs.router)
 	}
 
-	addr := formatBindAddr(gs.BindAddr, gs.Config.Port)
-	gs.logger.Debugf("start listen tcp %s...", addr)
+	addr := formatBindAddr(fs.BindAddr, fs.Config.Port)
+	fs.logger.Debugf("start listen tcp %s...", addr)
 	lis, err := net.Listen("tcp", addr)
 	if err != nil {
-		gs.logger.Fatalf("failed to listen: %v", err)
+		fs.logger.Fatalf("failed to listen: %v", err)
 	}
 
-	gs.Config.Port = getPort(lis)
+	fs.Config.Port = getPort(lis)
 
-	gs.logger.Infof("listen on %s...", lis.Addr().String())
+	fs.logger.Infof("listen on %s...", lis.Addr().String())
 
-	err = gs.svr.Serve(lis)
+	err = fs.svr.Serve(lis)
 
 	if err != nil && err == http.ErrServerClosed {
 		return nil

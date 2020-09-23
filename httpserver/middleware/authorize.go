@@ -6,10 +6,13 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/valyala/fasthttp"
+
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/baozhenglab/go-sdk/v2/logger"
 	"github.com/baozhenglab/oauthclient"
 	"github.com/baozhenglab/sdkcm"
-	"github.com/gin-gonic/gin"
 )
 
 type ServiceContext interface {
@@ -23,10 +26,10 @@ type CurrentUserProvider interface {
 	ServiceContext
 }
 
-func Authorize(cup CurrentUserProvider, isRequired ...bool) gin.HandlerFunc {
+func Authorize(cup CurrentUserProvider, isRequired ...bool) fiber.Handler {
 	required := len(isRequired) == 0
 
-	return func(c *gin.Context) {
+	return func(c *fiber.Ctx) error {
 		token := accessTokenFromRequest(c.Request)
 
 		if token == "" {
@@ -34,8 +37,7 @@ func Authorize(cup CurrentUserProvider, isRequired ...bool) gin.HandlerFunc {
 				panic(sdkcm.ErrUnauthorized(nil, sdkcm.ErrAccessTokenInvalid))
 			} else {
 				c.Set("current_user", guest{})
-				c.Next()
-				return
+				return c.Next()
 			}
 
 		}
@@ -59,11 +61,12 @@ func Authorize(cup CurrentUserProvider, isRequired ...bool) gin.HandlerFunc {
 		}
 
 		c.Set("current_user", sdkcm.CurrentUser(tokenInfo, u))
+		return c.Next()
 	}
 }
 
-func RequireRoles(roles ...fmt.Stringer) gin.HandlerFunc {
-	return func(c *gin.Context) {
+func RequireRoles(roles ...fmt.Stringer) fiber.Handler {
+	return func(c *fiber.Ctx) error {
 		r, ok := c.Get("current_user")
 
 		if !ok {
@@ -75,29 +78,30 @@ func RequireRoles(roles ...fmt.Stringer) gin.HandlerFunc {
 
 		for _, v := range roles {
 			if v.String() == reqRole.String() {
-				c.Next()
-				return
+				return c.Next()
 			}
 		}
 
 		panic(sdkcm.ErrUnauthorized(nil, sdkcm.ErrNoPermission))
+		return nil
 	}
 }
 
-func accessTokenFromRequest(req *http.Request) string {
+func accessTokenFromRequest(req *fasthttp.Request) string {
 	// According to https://tools.ietf.org/html/rfc6750 you can pass tokens through:
 	// - Form-Encoded Body Parameter. Recommended, more likely to appear. e.g.: Authorization: Bearer mytoken123
 	// - URI Query Parameter e.g. access_token=mytoken123
 
-	auth := req.Header.Get("Authorization")
+	auth := string(req.Header.Peek("Authorization"))
+
 	split := strings.SplitN(auth, " ", 2)
 	if len(split) != 2 || !strings.EqualFold(split[0], "bearer") {
 		// Nothing in Authorization header, try access_token
 		// Empty string returned if there's no such parameter
-		if err := req.ParseMultipartForm(1 << 20); err != nil && err != http.ErrNotMultipart {
+		if err := req.MultipartForm(); err != nil && err != http.ErrNotMultipart {
 			return ""
 		}
-		return req.Form.Get("access_token")
+		return req.B
 	}
 
 	return split[1]

@@ -1,7 +1,6 @@
 package httpserver
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"net"
@@ -11,10 +10,8 @@ import (
 
 	"github.com/baozhenglab/go-sdk/v2/httpserver/middleware"
 	"github.com/baozhenglab/go-sdk/v2/logger"
-	"github.com/gin-gonic/gin"
 	"github.com/gofiber/fiber/v2"
 	logfiber "github.com/gofiber/fiber/v2/middleware/logger"
-	"go.opencensus.io/plugin/ochttp"
 )
 
 var (
@@ -40,8 +37,7 @@ type fiberService struct {
 	isEnabled   bool
 	name        string
 	logger      logger.Logger
-	svr         *myHttpServer
-	router      *fiber.App
+	app         *fiber.App
 	mu          *sync.Mutex
 	handlers    []func(*fiber.App)
 	middlewares []fiber.Handler
@@ -78,25 +74,17 @@ func (fs *fiberService) Configure() error {
 	// }
 
 	fs.logger.Debug("init fiber engine...")
-	fs.router = fiber.New()
+	fs.app = fiber.New()
 	for _, m := range fs.middlewares {
-		fs.router.Use(m)
+		fs.app.Use(m)
 	}
 	if !fs.FiberNoDefault {
 		if !fiberNoLogger {
-			fs.router.Use(logfiber.New())
+			fs.app.Use(logfiber.New())
 		}
 		//gs.router.Use(gin.Recovery())
-		fs.router.Use(middleware.PanicLogger())
+		fs.app.Use(middleware.PanicLogger())
 	}
-	och := &ochttp.Handler{
-		Handler: fs.router,
-	}
-
-	fs.svr = &myHttpServer{
-		Server: http.Server{Handler: och},
-	}
-
 	return nil
 }
 
@@ -117,7 +105,7 @@ func (fs *fiberService) Run() error {
 	}
 
 	for _, hdl := range fs.handlers {
-		hdl(fs.router)
+		hdl(fs.app)
 	}
 
 	addr := formatBindAddr(fs.BindAddr, fs.Config.Port)
@@ -131,7 +119,7 @@ func (fs *fiberService) Run() error {
 
 	fs.logger.Infof("listen on %s...", lis.Addr().String())
 
-	err = fs.svr.Serve(lis)
+	err = fs.app.Listener(lis)
 
 	if err != nil && err == http.ErrServerClosed {
 		return nil
@@ -145,56 +133,55 @@ func getPort(lis net.Listener) int {
 	return tcp.Port
 }
 
-func (gs *ginService) Port() int {
-	gs.mu.Lock()
-	defer gs.mu.Unlock()
-	return gs.Config.Port
+func (fs *fiberService) Port() int {
+	fs.mu.Lock()
+	defer fs.mu.Unlock()
+	return fs.Config.Port
 }
 
-func (gs *ginService) Stop() <-chan bool {
+func (fs *fiberService) Stop() <-chan bool {
 	c := make(chan bool)
 
 	go func() {
-		if gs.svr != nil {
-			_ = gs.svr.Shutdown(context.Background())
+		if fs.app != nil {
+			_ = fs.app.Shutdown()
 		}
 		c <- true
 	}()
 	return c
 }
 
-func (gs *ginService) URI() string {
-	return formatBindAddr(gs.BindAddr, gs.Config.Port)
+func (fs *fiberService) URI() string {
+	return formatBindAddr(fs.BindAddr, fs.Config.Port)
 }
 
-func (gs *ginService) AddHandler(hdl func(*gin.Engine)) {
-	gs.isEnabled = true
-	gs.handlers = append(gs.handlers, hdl)
+func (fs *fiberService) AddHandler(hdl func(*fiber.App)) {
+	fs.isEnabled = true
+	fs.handlers = append(fs.handlers, hdl)
 }
 
-func (gs *ginService) AddMiddleware(hdl gin.HandlerFunc) {
-	gs.middlewares = append(gs.middlewares, hdl)
+func (fs *fiberService) AddMiddleware(hdl fiber.Handler) {
+	fs.middlewares = append(fs.middlewares, hdl)
 }
 
-func (gs *ginService) Reload(config Config) error {
-	gs.Config = config
-	<-gs.Stop()
-	return gs.Run()
+func (fs *fiberService) Reload(config Config) error {
+	fs.Config = config
+	<-fs.Stop()
+	return fs.Run()
 }
 
-func (gs *ginService) GetConfig() Config {
-	return gs.Config
+func (fs *fiberService) GetConfig() Config {
+	return fs.Config
 }
 
-func (gs *ginService) IsRunning() bool {
-	return gs.svr != nil
+func (fs *fiberService) IsRunning() bool {
+	return fs.app != nil
 }
 
-func (gs *ginService) Routes() []gin.RouteInfo {
-	gin.SetMode(gin.ReleaseMode)
-	gs.router = gin.New()
-	for _, hdl := range gs.handlers {
-		hdl(gs.router)
+func (fs *fiberService) Routes() [][]*fiber.Route {
+	fs.app = fiber.New()
+	for _, hdl := range fs.handlers {
+		hdl(fs.app)
 	}
-	return gs.router.Routes()
+	return fs.app.Stack()
 }

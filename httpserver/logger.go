@@ -23,7 +23,7 @@ func Logger(log logger.Logger) fiber.Handler {
 		statusCode := c.Response().StatusCode()
 		clientIP := c.IP()
 		clientUserAgent := string(c.Request().Header.UserAgent())
-		referer := string(c.Request().Header.Referer)
+		referer := string(c.Request().Header.Referer())
 		hostname, err := os.Hostname()
 		if err != nil {
 			hostname = "unknown"

@@ -4,15 +4,14 @@ package goservice
 
 import (
 	"github.com/baozhenglab/go-sdk/v2/logger"
-
-	"github.com/gin-gonic/gin"
+	"github.com/gofiber/fiber/v2"
 )
 
 // Convenience option method for creating/initializing a service
 type Option func(*service)
 
 // HTTP Server Handler for register some routes and gin handlers
-type HttpServerHandler = func(*gin.Engine)
+type HttpServerHandler = func(*fiber.App)
 
 // A kind of server job
 type Function func(ServiceContext) error
@@ -98,9 +97,9 @@ type HttpServer interface {
 	// URI that the server is listening
 	URI() string
 
-	AddMiddleware(gin.HandlerFunc)
+	AddMiddleware(fiber.Handler)
 
-	Routes() []gin.RouteInfo
+	Routes() [][]*fiber.Route
 }
 
 //Config init flag for other config without init service

@@ -11,6 +11,9 @@ import (
 	"strings"
 	"syscall"
 
+	"github.com/baozhenglab/go-sdk/v2/util"
+	"github.com/gofiber/fiber/v2"
+
 	"github.com/baozhenglab/go-sdk/v2/httpserver"
 	"github.com/baozhenglab/go-sdk/v2/logger"
 
@@ -98,7 +101,7 @@ func (s *service) Create() Service {
 		s.subServices = append(s.subServices, httpServer)
 	}
 
-	sv.initFlags()
+	s.initFlags()
 
 	if s.name == "" {
 		if len(os.Args) >= 2 {
@@ -211,8 +214,11 @@ func (s *service) RouteTable() {
 	routes := s.HTTPServer().Routes()
 	data := make([][]string, 0)
 	for _, route := range routes {
-		r := []string{route.Path, route.Method, route.Handler}
-		data = append(data, r)
+		for _, ro := range route {
+			r := []string{ro.Path, ro.Method, GetListNameHandler(ro.Handlers)}
+			data = append(data, r)
+		}
+
 	}
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetRowLine(true)
@@ -313,3 +319,12 @@ func (s *service) MustGet(prefix string) interface{} {
 }
 
 func (s *service) Env() string { return s.env }
+
+func GetListNameHandler(hdls []fiber.Handler) string {
+	res := ""
+	for _, hdl := range hdls {
+		res += util.GetFunctionName(hdl)
+		res += ","
+	}
+	return res
+}

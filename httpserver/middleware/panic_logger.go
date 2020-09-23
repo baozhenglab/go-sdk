@@ -3,14 +3,14 @@ package middleware
 import (
 	"bytes"
 	"fmt"
-	"github.com/gin-gonic/gin"
 	"io"
 	"io/ioutil"
 	"log"
-	"net/http/httputil"
 	"os"
 	"runtime"
 	"time"
+
+	"github.com/gofiber/fiber/v2"
 )
 
 var (
@@ -20,25 +20,24 @@ var (
 	slash     = []byte("/")
 )
 
-func PanicLogger() gin.HandlerFunc {
+func PanicLogger() fiber.Handler {
 	return RecoveryWithWriter(os.Stderr)
 }
 
 // RecoveryWithWriter returns a middleware for a given writer that recovers from any panics and writes a 500 if there was one.
-func RecoveryWithWriter(out io.Writer) gin.HandlerFunc {
+func RecoveryWithWriter(out io.Writer) fiber.Handler {
 	var logger *log.Logger
 	if out != nil {
 		logger = log.New(out, "\n\n\x1b[31m", log.LstdFlags)
 	}
-	return func(c *gin.Context) {
+	return func(c *fiber.Ctx) error {
 		defer func() {
 			if err := recover(); err != nil {
 				if logger != nil {
 					stack := stack(5)
-					httprequest, _ := httputil.DumpRequest(c.Request, true)
 					logger.Printf(
 						"[Recovery] %s panic recovered:\n%s\n%s\n%s%s",
-						timeFormat(time.Now()), string(httprequest),
+						timeFormat(time.Now()), string(c.Request().Body()),
 						err,
 						stack,
 						string([]byte{27, 91, 48, 109}),
@@ -47,7 +46,7 @@ func RecoveryWithWriter(out io.Writer) gin.HandlerFunc {
 				//c.AbortWithStatus(http.StatusInternalServerError)
 			}
 		}()
-		c.Next()
+		return c.Next()
 	}
 }
 

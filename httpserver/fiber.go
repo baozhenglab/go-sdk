@@ -13,6 +13,7 @@ import (
 	"github.com/baozhenglab/go-sdk/v2/logger"
 	"github.com/gin-gonic/gin"
 	"github.com/gofiber/fiber/v2"
+	logfiber "github.com/gofiber/fiber/v2/middleware/logger"
 	"go.opencensus.io/plugin/ochttp"
 )
 
@@ -76,17 +77,17 @@ func (fs *fiberService) Configure() error {
 	// 	gin.SetMode(gin.ReleaseMode)
 	// }
 
-	gs.logger.Debug("init gin engine...")
-	gs.router = gin.New()
-	if !gs.GinNoDefault {
-		if !ginNoLogger {
-			gs.router.Use(gin.Logger())
-		}
-		//gs.router.Use(gin.Recovery())
-		gs.router.Use(middleware.PanicLogger())
-	}
+	fs.logger.Debug("init fiber engine...")
+	fs.router = fiber.New()
 	for _, m := range gs.middlewares {
 		gs.router.Use(m)
+	}
+	if !fs.FiberNoDefault {
+		if !fiberNoLogger {
+			fs.router.Use(logfiber.New())
+		}
+		//gs.router.Use(gin.Recovery())
+		fs.router.Use(middleware.PanicLogger())
 	}
 	och := &ochttp.Handler{
 		Handler: gs.router,

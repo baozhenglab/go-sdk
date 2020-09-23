@@ -52,35 +52,9 @@ func New(opts ...Option) Service {
 		hasHttp:           true,
 	}
 
-	// init default logger
-	logger.InitServLogger(false)
-	sv.logger = logger.GetCurrent().GetLogger("service")
-
 	for _, opt := range opts {
 		opt(sv)
 	}
-
-	//// Http server
-	httpServer := httpserver.New(sv.name)
-	sv.httpServer = httpServer
-
-	sv.subServices = append(sv.subServices, httpServer)
-
-	sv.initFlags()
-
-	if sv.name == "" {
-		if len(os.Args) >= 2 {
-			sv.name = strings.Join(os.Args[:2], " ")
-		}
-	}
-
-	loggerRunnable := logger.GetCurrent().(Runnable)
-	loggerRunnable.InitFlags()
-	_ = loggerRunnable.Configure()
-
-	sv.cmdLine = newFlagSet(sv.name, flag.CommandLine)
-	sv.parseFlags()
-
 	return sv
 }
 
@@ -104,6 +78,42 @@ func (s *service) Init() error {
 
 func (s *service) IsRegistered() bool {
 	return s.isRegister
+}
+
+func (s *service) SetHTTPServer(has bool) Service {
+	s.hasHttp = has
+	return s
+}
+
+func (s *service) Create() Service {
+	// init default logger
+	logger.InitServLogger(false)
+	s.logger = logger.GetCurrent().GetLogger("service")
+
+	if s.hasHttp {
+		//// Http server
+		httpServer := httpserver.New(s.name)
+		s.httpServer = httpServer
+
+		s.subServices = append(s.subServices, httpServer)
+	}
+
+	sv.initFlags()
+
+	if s.name == "" {
+		if len(os.Args) >= 2 {
+			s.name = strings.Join(os.Args[:2], " ")
+		}
+	}
+
+	loggerRunnable := logger.GetCurrent().(Runnable)
+	loggerRunnable.InitFlags()
+	_ = loggerRunnable.Configure()
+
+	s.cmdLine = newFlagSet(s.name, flag.CommandLine)
+	s.parseFlags()
+
+	return s
 }
 
 func (s *service) Start() error {

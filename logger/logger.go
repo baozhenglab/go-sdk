@@ -5,10 +5,11 @@ package logger
 
 import (
 	"fmt"
-	"github.com/sirupsen/logrus"
 	"log"
 	"runtime"
 	"strings"
+
+	"github.com/sirupsen/logrus"
 )
 
 type Fields logrus.Fields

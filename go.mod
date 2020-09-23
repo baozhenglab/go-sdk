@@ -9,7 +9,6 @@ require (
 	github.com/btcsuite/btcutil v1.0.2
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/facebookgo/flagenv v0.0.0-20160425205200-fcd59fca7456
-	github.com/gin-gonic/gin v1.5.0
 	github.com/globalsign/mgo v0.0.0-20181015135952-eeefdecb41b8
 	github.com/gofiber/fiber/v2 v2.0.2
 	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334 // indirect

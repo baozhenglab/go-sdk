@@ -5,7 +5,7 @@ import (
 	"errors"
 	"time"
 
-	"github.com/baozhenglab/go-sdk/logger"
+	"github.com/baozhenglab/go-sdk/v2/logger"
 )
 
 var ErrTaskFailed = errors.New("job has failed after many retries")

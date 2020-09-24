@@ -3,13 +3,16 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"net/http"
 	"strings"
 
-	"github.com/baozhenglab/go-sdk/logger"
+	"github.com/valyala/fasthttp"
+
+	"github.com/gofiber/fiber/v2"
+
+	"github.com/baozhenglab/go-sdk/v2/logger"
+	"github.com/baozhenglab/go-sdk/v2/util"
 	"github.com/baozhenglab/oauthclient"
 	"github.com/baozhenglab/sdkcm"
-	"github.com/gin-gonic/gin"
 )
 
 type ServiceContext interface {
@@ -23,19 +26,23 @@ type CurrentUserProvider interface {
 	ServiceContext
 }
 
-func Authorize(cup CurrentUserProvider, isRequired ...bool) gin.HandlerFunc {
+type CurrentUserContext struct {
+	sdkcm.OAuth
+	sdkcm.User
+}
+
+func Authorize(cup CurrentUserProvider, isRequired ...bool) fiber.Handler {
 	required := len(isRequired) == 0
 
-	return func(c *gin.Context) {
-		token := accessTokenFromRequest(c.Request)
+	return func(c *fiber.Ctx) error {
+		token := accessTokenFromRequest(c.Request())
 
 		if token == "" {
 			if required {
 				panic(sdkcm.ErrUnauthorized(nil, sdkcm.ErrAccessTokenInvalid))
 			} else {
-				c.Set("current_user", guest{})
-				c.Next()
-				return
+				c.Set("current_user", util.EncodeUser(guest{}))
+				return c.Next()
 			}
 
 		}
@@ -52,52 +59,51 @@ func Authorize(cup CurrentUserProvider, isRequired ...bool) gin.HandlerFunc {
 		}
 
 		// Fetch user info from db
-		u, err := cup.GetCurrentUser(c.Request.Context(), tokenInfo.UserId)
+		u, err := cup.GetCurrentUser(c.Context(), tokenInfo.UserId)
 
 		if err != nil {
 			panic(sdkcm.ErrUnauthorized(err, sdkcm.ErrUserNotFound))
 		}
 
-		c.Set("current_user", sdkcm.CurrentUser(tokenInfo, u))
+		c.Set("current_user", util.EncodeUser(sdkcm.CurrentUser(tokenInfo, u)))
+		return c.Next()
 	}
 }
 
-func RequireRoles(roles ...fmt.Stringer) gin.HandlerFunc {
-	return func(c *gin.Context) {
-		r, ok := c.Get("current_user")
+func RequireRoles(roles ...fmt.Stringer) fiber.Handler {
+	return func(c *fiber.Ctx) error {
+		r := c.Get("current_user")
 
-		if !ok {
+		if r == "" {
 			panic(sdkcm.ErrUnauthorized(sdkcm.ErrNoPermission, sdkcm.ErrNoPermission))
 		}
-
-		requester := r.(sdkcm.Requester)
+		var requester CurrentUserContext
+		util.DecodeUser(r, &requester)
 		reqRole := sdkcm.ParseSystemRole(requester.GetSystemRole())
 
 		for _, v := range roles {
 			if v.String() == reqRole.String() {
-				c.Next()
-				return
+				return c.Next()
 			}
 		}
 
 		panic(sdkcm.ErrUnauthorized(nil, sdkcm.ErrNoPermission))
+		return nil
 	}
 }
 
-func accessTokenFromRequest(req *http.Request) string {
+func accessTokenFromRequest(req *fasthttp.Request) string {
 	// According to https://tools.ietf.org/html/rfc6750 you can pass tokens through:
 	// - Form-Encoded Body Parameter. Recommended, more likely to appear. e.g.: Authorization: Bearer mytoken123
 	// - URI Query Parameter e.g. access_token=mytoken123
 
-	auth := req.Header.Get("Authorization")
+	auth := string(req.Header.Peek("Authorization"))
+
 	split := strings.SplitN(auth, " ", 2)
 	if len(split) != 2 || !strings.EqualFold(split[0], "bearer") {
 		// Nothing in Authorization header, try access_token
 		// Empty string returned if there's no such parameter
-		if err := req.ParseMultipartForm(1 << 20); err != nil && err != http.ErrNotMultipart {
-			return ""
-		}
-		return req.Form.Get("access_token")
+		return ""
 	}
 
 	return split[1]

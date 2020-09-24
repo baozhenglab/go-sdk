@@ -11,8 +11,11 @@ import (
 	"strings"
 	"syscall"
 
-	"github.com/baozhenglab/go-sdk/httpserver"
-	"github.com/baozhenglab/go-sdk/logger"
+	"github.com/baozhenglab/go-sdk/v2/util"
+	"github.com/gofiber/fiber/v2"
+
+	"github.com/baozhenglab/go-sdk/v2/httpserver"
+	"github.com/baozhenglab/go-sdk/v2/logger"
 
 	"github.com/joho/godotenv"
 	"github.com/olekukonko/tablewriter"
@@ -52,10 +55,6 @@ func New(opts ...Option) Service {
 		hasHttp:           true,
 	}
 
-	// init default logger
-	logger.InitServLogger(false)
-	sv.logger = logger.GetCurrent().GetLogger("service")
-
 	for _, opt := range opts {
 		opt(sv)
 	}
@@ -80,12 +79,20 @@ func (s *service) Init() error {
 	return nil
 }
 
-func (s *service) SetHttpServer(has bool) Service {
+func (s *service) IsRegistered() bool {
+	return s.isRegister
+}
+
+func (s *service) SetHTTPServer(has bool) Service {
 	s.hasHttp = has
 	return s
 }
 
 func (s *service) Create() Service {
+	// init default logger
+	logger.InitServLogger(false)
+	s.logger = logger.GetCurrent().GetLogger("service")
+
 	if s.hasHttp {
 		//// Http server
 		httpServer := httpserver.New(s.name)
@@ -110,10 +117,6 @@ func (s *service) Create() Service {
 	s.parseFlags()
 
 	return s
-}
-
-func (s *service) IsRegistered() bool {
-	return s.isRegister
 }
 
 func (s *service) Start() error {
@@ -211,8 +214,11 @@ func (s *service) RouteTable() {
 	routes := s.HTTPServer().Routes()
 	data := make([][]string, 0)
 	for _, route := range routes {
-		r := []string{route.Path, route.Method, route.Handler}
-		data = append(data, r)
+		for _, ro := range route {
+			r := []string{ro.Path, ro.Method, GetListNameHandler(ro.Handlers)}
+			data = append(data, r)
+		}
+
 	}
 	table := tablewriter.NewWriter(os.Stdout)
 	table.SetRowLine(true)
@@ -313,3 +319,12 @@ func (s *service) MustGet(prefix string) interface{} {
 }
 
 func (s *service) Env() string { return s.env }
+
+func GetListNameHandler(hdls []fiber.Handler) string {
+	res := ""
+	for _, hdl := range hdls {
+		res += util.GetFunctionName(hdl)
+		res += ","
+	}
+	return res
+}

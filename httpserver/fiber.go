@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/baozhenglab/go-sdk/v2/httpserver/middleware"
 	"github.com/baozhenglab/go-sdk/v2/logger"
@@ -74,16 +75,19 @@ func (fs *fiberService) Configure() error {
 	// }
 
 	fs.logger.Debug("init fiber engine...")
-	fs.app = fiber.New()
-	for _, m := range fs.middlewares {
-		fs.app.Use(m)
-	}
+	fs.app = fiber.New(fiber.Config{
+		ReadTimeout:  1 * time.Second,
+		ErrorHandler: middleware.ErrorHandler(fs.logger),
+	})
 	if !fs.FiberNoDefault {
 		if !fiberNoLogger {
 			fs.app.Use(logfiber.New())
 		}
 		//gs.router.Use(gin.Recovery())
 		fs.app.Use(middleware.PanicLogger())
+	}
+	for _, m := range fs.middlewares {
+		fs.app.Use(m)
 	}
 	return nil
 }
@@ -141,10 +145,9 @@ func (fs *fiberService) Port() int {
 
 func (fs *fiberService) Stop() <-chan bool {
 	c := make(chan bool)
-
 	go func() {
 		if fs.app != nil {
-			_ = fs.app.Shutdown()
+			fs.app.Shutdown()
 		}
 		c <- true
 	}()

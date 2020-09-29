@@ -41,7 +41,7 @@ func Authorize(cup CurrentUserProvider, isRequired ...bool) fiber.Handler {
 			if required {
 				panic(sdkcm.ErrUnauthorized(nil, sdkcm.ErrAccessTokenInvalid))
 			} else {
-				c.Set("current_user", util.EncodeUser(guest{}))
+				c.Locals("current_user", util.EncodeUser(guest{}))
 				return c.Next()
 			}
 
@@ -65,7 +65,7 @@ func Authorize(cup CurrentUserProvider, isRequired ...bool) fiber.Handler {
 			panic(sdkcm.ErrUnauthorized(err, sdkcm.ErrUserNotFound))
 		}
 
-		c.Set("current_user", util.EncodeUser(sdkcm.CurrentUser(tokenInfo, u)))
+		c.Locals("current_user", sdkcm.CurrentUser(tokenInfo, u))
 		return c.Next()
 	}
 }

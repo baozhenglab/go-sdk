@@ -15,7 +15,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/baozhenglab/go-sdk/logger"
+	"github.com/baozhenglab/go-sdk/v2/logger"
 	"github.com/jinzhu/gorm"
 )
 

@@ -27,7 +27,7 @@ type Config struct {
 	FiberNoDefault bool   `json:"http_no_default"`
 }
 
-type GinService interface {
+type FiberService interface {
 	// block until ready
 	Port() int
 	isFiberService()

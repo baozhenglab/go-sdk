@@ -3,16 +3,15 @@ package httpserver
 import (
 	"flag"
 	"fmt"
+	"github.com/baozhenglab/go-sdk/v2/httpserver/middleware"
+	"github.com/baozhenglab/go-sdk/v2/logger"
+	"github.com/gofiber/fiber/v2"
+	logfiber "github.com/gofiber/fiber/v2/middleware/logger"
 	"net"
 	"net/http"
 	"strings"
 	"sync"
 	"time"
-
-	"github.com/baozhenglab/go-sdk/v2/httpserver/middleware"
-	"github.com/baozhenglab/go-sdk/v2/logger"
-	"github.com/gofiber/fiber/v2"
-	logfiber "github.com/gofiber/fiber/v2/middleware/logger"
 )
 
 var (
@@ -42,16 +41,18 @@ type fiberService struct {
 	mu          *sync.Mutex
 	handlers    []func(*fiber.App)
 	middlewares []fiber.Handler
+	config      *fiber.Config
 	//registeredID  string
 	//registryAgent registry.Agent
 }
 
-func New(name string) *fiberService {
+func New(name string, config *fiber.Config) *fiberService {
 	return &fiberService{
 		name:        name,
 		mu:          &sync.Mutex{},
 		handlers:    []func(*fiber.App){},
 		middlewares: []fiber.Handler{},
+		config:      config,
 	}
 }
 
@@ -75,10 +76,15 @@ func (fs *fiberService) Configure() error {
 	// }
 
 	fs.logger.Debug("init fiber engine...")
-	fs.app = fiber.New(fiber.Config{
-		ReadTimeout:  1 * time.Second,
-		ErrorHandler: middleware.ErrorHandler(fs.logger),
-	})
+	if fs.config == nil {
+		fs.app = fiber.New(fiber.Config{
+			ReadTimeout:  1 * time.Second,
+			ErrorHandler: middleware.ErrorHandler(fs.logger),
+		})
+	} else {
+		fs.app = fiber.New(*fs.config)
+	}
+
 	if !fs.FiberNoDefault {
 		if !fiberNoLogger {
 			fs.app.Use(logfiber.New())

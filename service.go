@@ -88,14 +88,14 @@ func (s *service) SetHTTPServer(has bool) Service {
 	return s
 }
 
-func (s *service) Create() Service {
+func (s *service) Create(fiberConfig *fiber.Config) Service {
 	// init default logger
 	logger.InitServLogger(false)
 	s.logger = logger.GetCurrent().GetLogger("service")
 
 	if s.hasHttp {
 		//// Http server
-		httpServer := httpserver.New(s.name)
+		httpServer := httpserver.New(s.name, fiberConfig)
 		s.httpServer = httpServer
 
 		s.subServices = append(s.subServices, httpServer)

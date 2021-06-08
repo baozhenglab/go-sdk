@@ -62,7 +62,7 @@ type Service interface {
 
 	SetHTTPServer(has bool) Service
 
-	Create() Service
+	Create(config *fiber.Config) Service
 }
 
 // Service Context: A wrapper for all things needed for developing a service

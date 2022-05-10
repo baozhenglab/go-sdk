@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"github.com/baozhenglab/go-sdk/v2/httpserver/middleware"
 	"github.com/baozhenglab/go-sdk/v2/logger"
+	"github.com/gofiber/adaptor/v2"
 	"github.com/gofiber/fiber/v2"
 	logfiber "github.com/gofiber/fiber/v2/middleware/logger"
+	"go.opencensus.io/plugin/ochttp"
 	"net"
 	"net/http"
 	"strings"
@@ -24,6 +26,8 @@ type Config struct {
 	Port           int    `json:"http_port"`
 	BindAddr       string `json:"http_bind_addr"`
 	FiberNoDefault bool   `json:"http_no_default"`
+	JaegerActive   bool
+	OcAgentHost    string
 }
 
 type FiberService interface {
@@ -66,6 +70,8 @@ func (fs *fiberService) InitFlags() {
 	flag.StringVar(&fs.BindAddr, prefix+"addr", "", "fiber server bind address")
 	flag.StringVar(&fiberMode, "fiber-mode", "", "fiber mode")
 	flag.BoolVar(&fiberNoLogger, "fiber-no-logger", false, "disable default fiber logger middleware")
+	flag.BoolVar(&fs.Config.JaegerActive, prefix+"jaeger-active", false, "Active jaeger")
+	flag.StringVar(&fs.Config.OcAgentHost, prefix+"oc-agent-host", "", "OC agent host")
 }
 
 func (fs *fiberService) Configure() error {
@@ -128,9 +134,23 @@ func (fs *fiberService) Run() error {
 	fs.Config.Port = getPort(lis)
 
 	fs.logger.Infof("listen on %s...", lis.Addr().String())
+	if fs.Config.JaegerActive == false {
+		err = fs.app.Listener(lis)
 
-	err = fs.app.Listener(lis)
-
+		if err != nil && err == http.ErrServerClosed {
+			return nil
+		}
+		return err
+	}
+	och := &ochttp.Handler{
+		Handler: adaptor.FiberApp(fs.app),
+	}
+	var httpServe = &myHttpServer{
+		Server: http.Server{
+			Handler: och,
+		},
+	}
+	err = httpServe.Serve(lis)
 	if err != nil && err == http.ErrServerClosed {
 		return nil
 	}

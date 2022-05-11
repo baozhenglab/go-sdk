@@ -27,7 +27,6 @@ type Config struct {
 	BindAddr       string `json:"http_bind_addr"`
 	FiberNoDefault bool   `json:"http_no_default"`
 	JaegerActive   bool
-	OcAgentHost    string
 }
 
 type FiberService interface {
@@ -71,7 +70,6 @@ func (fs *fiberService) InitFlags() {
 	flag.StringVar(&fiberMode, "fiber-mode", "", "fiber mode")
 	flag.BoolVar(&fiberNoLogger, "fiber-no-logger", false, "disable default fiber logger middleware")
 	flag.BoolVar(&fs.Config.JaegerActive, prefix+"-jaeger-active", false, "Active jaeger")
-	flag.StringVar(&fs.Config.OcAgentHost, prefix+"-oc-agent-host", "", "OC agent host")
 }
 
 func (fs *fiberService) Configure() error {

@@ -133,6 +133,7 @@ func (fs *fiberService) Run() error {
 
 	fs.logger.Infof("listen on %s...", lis.Addr().String())
 	if fs.Config.JaegerActive == false {
+		fs.logger.Infoln("Running server no tracing")
 		err = fs.app.Listener(lis)
 
 		if err != nil && err == http.ErrServerClosed {
@@ -148,6 +149,7 @@ func (fs *fiberService) Run() error {
 			Handler: och,
 		},
 	}
+	fs.logger.Infoln("Running server have tracing")
 	err = httpServe.Serve(lis)
 	if err != nil && err == http.ErrServerClosed {
 		return nil
